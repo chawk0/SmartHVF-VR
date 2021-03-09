@@ -1,0 +1,12 @@
+glass biconvex lens:  1.96" diameter
+
+
+top slot
+0.630 wide
+0.275 tall
+0.080 deep
+
+side slot
+0.390 tall
+0.550 wide
+0.080 deep

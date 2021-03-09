@@ -1,0 +1,21 @@
+patient name(?), age
+datetime
+stimulus size
+false pos errors
+false neg errors
+test duration
+
+
+
+GUI panels:
+
+main screen
+
+test config screen
+
+patient data screen
+
+test environment
+
+eyemap display?
+

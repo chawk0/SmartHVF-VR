@@ -1,0 +1,19 @@
+* download/install Unity Hub
+* may need to activate a license (I made a Personal, non-business one for free)
+* git clone the repo
+* add the project path to the Projects section of Unity Hub
+* install a suitable version of the Unity Editor, 2019.4.# should suffice (2020 may have issues)
+  -- make sure to include Android build support in the install options
+  -- if the Unity Editor version doesn't match precisely, you can upgrade the project to that newer version
+  -- in writing this document, I took the project from 2019.4.21f to 2019.4.33f and it worked fine
+* once the project is open, you may see warnings about a deprecated API being used, this is expected
+  -- this project uses the Google VR Android package, v2.0.0
+  -- it's also using the older XR system in Unity, NOT the XR Plugin stuff
+  -- you can find this under Build Settings -> Player Settings -> Player section, scroll down to the XR Settings panel and you can find the deprecated VR stuff.  currently using Cardboard SDK
+* the Android phone itself needs to have USB Debugging enabled, which is enabled in the Developer Mode settings
+  -- enabling Developer Mode varies between phones, should be easy to find on Google
+* plugin phone to PC via USB
+* confirm in Unity Editor that the build target is correct: File -> Build Settings, should be building an Android app
+* File -> Build & Run, or hotkey Ctrl-B should start the build and install the .apk on the phone
+  -- the initial build takes a minute or two, but subsequent builds are much faster
+  -- you likely need to authorize the PC to install onto the phone; check for a pop-up on the phone

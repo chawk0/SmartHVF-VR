@@ -67,6 +67,8 @@ public class Main : MonoBehaviour
 
     private TestInfo testti;
 
+    private BluetoothManager bt;
+
     void Start()
     {
         XRSettings.enabled = false;
@@ -92,15 +94,17 @@ public class Main : MonoBehaviour
         // create the timeout timer
         tot = new TimeoutTimer();
 
+        bt = GameObject.FindGameObjectWithTag("BTObj").GetComponent<BluetoothManager>();
+        //bt.Connect();
         
         // setup the Android Java objects that let us communicate to the SmartHVF-Input project and
         // receive bluetooth comms
-        Debug.Log("Atempting to start BT library...");
+        /*Debug.Log("Atempting to start BT library...");
         AndroidJavaClass player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
         unityContext = player.GetStatic<AndroidJavaObject>("currentActivity");
 
         btLib = new AndroidJavaObject("com.example.testlibrary.TestClass");
-        btLib.Call("InitBluetooth", new object[] { unityContext });
+        btLib.Call("InitBluetooth", new object[] { unityContext });*/
         
     }
 
@@ -154,7 +158,8 @@ public class Main : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    {    
+    {
+
         // detect any touching of the screen
         if (Input.touchCount > 0)
         {

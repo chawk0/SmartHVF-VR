@@ -144,14 +144,38 @@ public class BrowseTestHistoryPanelControl : MonoBehaviour
     {
         if (currentlySelectedTest != null)
         {
-            Texture2D temp = new Texture2D(2, 2);
-            temp.SetPixels32(currentlySelectedTest.eyeMap.GetPixels32());
-            temp.Resize(currentlySelectedTest.eyeMap.width * 20, currentlySelectedTest.eyeMap.height * 20);
+            int w = currentlySelectedTest.eyeMap.width * 20;
+            int h = currentlySelectedTest.eyeMap.height * 20;
+            RenderTexture rt = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32);
+            RenderTexture.active = rt;
+            Graphics.Blit(currentlySelectedTest.eyeMap, rt);
+            Texture2D temp = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            temp.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            temp.Apply();
+            // the actual eyemap texture is quite small, so scale up by 20x for the image to be saved
+            //int w = currentlySelectedTest.eyeMap.width * 20;
+            //int h = currentlySelectedTest.eyeMap.height * 20;
+            //Texture2D temp = new Texture2D(26, 23, TextureFormat.RGBA32, false);
+            //Texture2D temp = new Texture2D(currentlySelectedTest.eyeMap.width, currentlySelectedTest.eyeMap.height, TextureFormat.RGBA32, false);
+            //Color32[] p = currentlySelectedTest.eyeMap.GetPixels32();
+            //Debug.Log(String.Format("current test eyemap length: {0}", p.Length));
+            //temp.SetPixels32(p);
+            /*
+            for (int y = 0; y < temp.height; y++)
+                for (int x = 0; x < temp.width; x++)
+                {
+                    temp.SetPixel(x, y, Color.green);
+                }*/
+
+            //temp.Resize(currentlySelectedTest.eyeMap.width * 20, currentlySelectedTest.eyeMap.height * 20);
+            
             temp.Apply();
             Debug.Log("saving test results to image...");
             NativeGallery.SaveImageToGallery(temp, "SmartHVF", 
                 currentlySelectedTest.patientID + "-" + currentlySelectedTest.dateTime.ToString("yyyy-MMM-dd-HH-mm-ss") + ".png");
-            UnityEngine.Object.Destroy(temp);
+            //NativeGallery.SaveImageToGallery(currentlySelectedTest.eyeMap, "SmartHVF",
+            //    currentlySelectedTest.patientID + "-" + currentlySelectedTest.dateTime.ToString("yyyy-MMM-dd-HH-mm-ss") + ".png");
+            //UnityEngine.Object.Destroy(temp);
         }
     }
 }

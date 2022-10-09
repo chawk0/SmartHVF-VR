@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using System.Xml;
 using System.Xml.Schema;
 using UnityEngine;
+using SimpleFileBrowser;
 
 // this class will hold some basic patient data, and also a list
 // of tests already performed.
@@ -25,7 +26,7 @@ public class Patient
     public List<TestInfo> testHistory;
 
     // this is combination of the first/last name and the first 8 digits of the GUID:
-    // 'Joe Bob-12345678'
+    // 'Joe_Bob_12345678'
     public string patientID;
 
     public Patient()
@@ -38,41 +39,73 @@ public class Patient
         this.name = name;
         this.age = age;
         this.guid = guid;
-        this.testHistory = null;
+        this.testHistory = new List<TestInfo>();
 
         this.patientID = null;
     }
 
+    private string getXMLDataString()
+    {
+        using (MemoryStream ms = new MemoryStream())
+        {
+            DataContractSerializer s = new DataContractSerializer(this.GetType());
+            s.WriteObject(ms, this);
+            ms.Seek(0, SeekOrigin.Begin);
+
+            using (var sr = new StreamReader(ms))
+            {
+                string result = sr.ReadToEnd();
+                return result;
+            }
+        }
+    }
+
     public void saveToFile()
     {
+        Debug.Log("saving new patient data!");
         // if patient name is "Joe Bob" and GUID is "09a669c5-....", then all
-        // relevant information is stored in a directory named "Joe Bob-09a669c5",
-        // inside of which is "Joe Bob-09a669c5.xml" as well as various test results
+        // relevant information is stored in a directory named "Joe_Bob_09a669c5",
+        // inside of which is "Joe_Bob_09a669c5.xml" as well as various test results
         // in separate .xml files.
 
         // retrieve the first chunk of the GUID
         string guidChunk = this.guid.Substring(0, this.guid.IndexOf('-'));
-        // append to the end of patient name as the directory name
-        this.patientID = this.name + "-" + guidChunk;
+        // replace spaces with underscores and append the GUID chunk
+        this.patientID = this.name.Replace(' ', '_') + "_" + guidChunk;
+
+        Debug.Log("patient ID: " + this.patientID);
 
         try
         {
-            // first check if the directory already exists (theoretically this should never happen)
-            DirectoryInfo di = new DirectoryInfo(Application.persistentDataPath + "/Patients/" + this.patientID);
+            // first check if the Patients directory exists
+            string patientsDirectory = Application.persistentDataPath + "/Patients";
+            bool patientsDirectoryExists = FileBrowserHelpers.DirectoryExists(patientsDirectory);
 
-            if (di.Exists)
+            if (!patientsDirectoryExists)
+            {
+                Debug.Log("patients directory doesn't exist!  creating [" + Application.persistentDataPath + "/Patients");
+                FileBrowserHelpers.CreateFolderInDirectory(Application.persistentDataPath, "Patients");
+            }
+            else
+                Debug.Log("found Patients directory");
+
+            // next check if the new patient's data directory exists (should theoretically never happen)
+            string patientDataDirectory = Application.persistentDataPath + "/Patients/" + this.patientID;
+            //Debug.Log("patient data directory: " + patientDataDirectory);
+            bool patientDataDirectoryExists = FileBrowserHelpers.DirectoryExists(patientDataDirectory);
+
+            if (patientDataDirectoryExists)
                 throw new DuplicateNameException("patient data directory already exists!");
             else
-                di.Create();
+            {
+                Debug.Log("creating patient data directory");
+                FileBrowserHelpers.CreateFolderInDirectory(Application.persistentDataPath + "/Patients", this.patientID);
 
-            // now create the .xml file.  dataPath sets the name of the directory and the .xml file
-            DataContractSerializer s = new DataContractSerializer(this.GetType());
-            FileStream f = File.Create(Application.persistentDataPath + "/Patients/" + this.patientID + "/" + this.patientID + ".xml");
-
-            s.WriteObject(f, this);
-            f.Close();
-
-            Debug.Log("Wrote Patient object as serialized XML!");
+                string patientDataFile = patientDataDirectory + "/" + this.patientID + ".xml";
+                Debug.Log("writing serialized patient data to " + patientDataFile);
+                FileBrowserHelpers.WriteTextToFile(patientDataFile, this.getXMLDataString());
+                Debug.Log("done");
+            }
         }
         catch (Exception e)
         {
@@ -136,12 +169,26 @@ public class Patient
             
             Debug.Log("reading directory for test files");
             //string[] files = Directory.GetFiles(Application.persistentDataPath + "/Patients/" + patientID, "*.xml");
-            string[] files = Directory.GetFiles(dataPath, "*.xml");
+            //string[] files = Directory.GetFiles(dataPath, "*.xml");
+            FileSystemEntry[] files = FileBrowserHelpers.GetEntriesInDirectory(dataPath, false);
             Debug.Log("found " + files.Length + " files");
 
             testHistory = new List<TestInfo>();
-            foreach (string filePath in files)
+            foreach (FileSystemEntry file in files)
             {
+                Debug.Log("path: " + file.Path + ", name: " + file.Name + ", extension: " + file.Extension);
+                // skip any directories or the main patient data .xml file
+                if (!file.Name.Contains(patientID) && !file.IsDirectory)
+                {
+                    Debug.Log("loading test...");
+                    TestInfo ti = TestInfo.loadFromFile(file.Path);
+                    if (ti != null)
+                    {
+                        testHistory.Add(ti);
+                        Debug.Log("testinfo loaded!  type: " + (ti.type == TestType.LeftEye ? "left" : "right") + ", size: " + (int)ti.stimulusSize + ", datetime: " + ti.dateTime + ", duration: " + ti.duration + ", patientid: " + ti.patientID);
+                    }
+                }
+                /*
                 string fileName;
                 char[] slashes = { '\\', '/' };
                 int pos = filePath.LastIndexOfAny(slashes);
@@ -162,6 +209,7 @@ public class Patient
                         Debug.Log("testinfo loaded!  type: " + (ti.type == TestType.LeftEye ? "left" : "right") + ", size: " + (int)ti.stimulusSize + ", datetime: " + ti.dateTime + ", duration: " + ti.duration + ", patientid: " + ti.patientID);
                     }
                 }
+                */
             }
         }
     }

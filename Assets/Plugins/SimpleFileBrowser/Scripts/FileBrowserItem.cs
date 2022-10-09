@@ -23,6 +23,7 @@ namespace SimpleFileBrowser
 
 		[SerializeField]
 		private Image icon;
+		public Image Icon { get { return icon; } }
 
 		[SerializeField]
 		private Image multiSelectionToggle;
@@ -31,7 +32,11 @@ namespace SimpleFileBrowser
 		private Text nameText;
 #pragma warning restore 0649
 
-		private bool isSelected;
+#pragma warning disable 0414
+		private bool isSelected, isHidden;
+#pragma warning restore 0414
+
+		private UISkin skin;
 
 		private float pressTime = Mathf.Infinity;
 		private float prevClickTime;
@@ -55,9 +60,10 @@ namespace SimpleFileBrowser
 		#endregion
 
 		#region Initialization Functions
-		public void SetFileBrowser( FileBrowser fileBrowser )
+		public void SetFileBrowser( FileBrowser fileBrowser, UISkin skin )
 		{
 			this.fileBrowser = fileBrowser;
+			OnSkinRefreshed( skin, false );
 		}
 
 		public void SetFile( Sprite icon, string name, bool isDirectory )
@@ -76,10 +82,7 @@ namespace SimpleFileBrowser
 			{
 				// Item is held for a while
 				pressTime = Mathf.Infinity;
-				fileBrowser.MultiSelectionToggleSelectionMode = true;
-
-				if( !isSelected )
-					fileBrowser.OnItemSelected( this, false );
+				fileBrowser.OnItemHeld( this );
 			}
 		}
 		#endregion
@@ -87,6 +90,24 @@ namespace SimpleFileBrowser
 		#region Pointer Events
 		public void OnPointerClick( PointerEventData eventData )
 		{
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL || UNITY_WSA || UNITY_WSA_10_0
+			if( eventData.button == PointerEventData.InputButton.Middle )
+				return;
+			else if( eventData.button == PointerEventData.InputButton.Right )
+			{
+				// First, select the item
+				if( !isSelected )
+				{
+					prevClickTime = 0f;
+					fileBrowser.OnItemSelected( this, false );
+				}
+
+				// Then, show the context menu
+				fileBrowser.OnContextMenuTriggered( eventData.position );
+				return;
+			}
+#endif
+
 			if( Time.realtimeSinceStartup - prevClickTime < DOUBLE_CLICK_TIME )
 			{
 				prevClickTime = 0f;
@@ -101,26 +122,36 @@ namespace SimpleFileBrowser
 
 		public void OnPointerDown( PointerEventData eventData )
 		{
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL || UNITY_WSA || UNITY_WSA_10_0
+			if( eventData.button != PointerEventData.InputButton.Left )
+				return;
+#endif
+
 			pressTime = Time.realtimeSinceStartup;
 		}
 
 		public void OnPointerUp( PointerEventData eventData )
 		{
-			if( pressTime == Mathf.Infinity )
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL || UNITY_WSA || UNITY_WSA_10_0
+			if( eventData.button != PointerEventData.InputButton.Left )
+				return;
+#endif
+
+			if( pressTime != Mathf.Infinity )
+				pressTime = Mathf.Infinity;
+			else if( fileBrowser.MultiSelectionToggleSelectionMode )
 			{
 				// We have activated MultiSelectionToggleSelectionMode with this press, processing the click would result in
 				// deselecting this item since its selected state would be toggled
 				eventData.eligibleForClick = false;
 			}
-			else
-				pressTime = Mathf.Infinity;
 		}
 
 #if UNITY_EDITOR || ( !UNITY_ANDROID && !UNITY_IOS )
 		public void OnPointerEnter( PointerEventData eventData )
 		{
 			if( !isSelected )
-				background.color = fileBrowser.hoveredFileColor;
+				background.color = skin.FileHoveredBackgroundColor;
 		}
 #endif
 
@@ -128,7 +159,7 @@ namespace SimpleFileBrowser
 		public void OnPointerExit( PointerEventData eventData )
 		{
 			if( !isSelected )
-				background.color = fileBrowser.normalFileColor;
+				background.color = ( Position % 2 ) == 0 ? skin.FileNormalBackgroundColor : skin.FileAlternatingBackgroundColor;
 		}
 #endif
 		#endregion
@@ -137,43 +168,70 @@ namespace SimpleFileBrowser
 		public void SetSelected( bool isSelected )
 		{
 			this.isSelected = isSelected;
-			background.color = isSelected ? fileBrowser.selectedFileColor : fileBrowser.normalFileColor;
 
-			if( fileBrowser.MultiSelectionToggleSelectionMode )
+			background.color = isSelected ? skin.FileSelectedBackgroundColor : ( ( Position % 2 ) == 0 ? skin.FileNormalBackgroundColor : skin.FileAlternatingBackgroundColor );
+			nameText.color = isSelected ? skin.FileSelectedTextColor : skin.FileNormalTextColor;
+
+			if( isHidden )
 			{
-				if( !multiSelectionToggle.gameObject.activeSelf )
-				{
-					multiSelectionToggle.gameObject.SetActive( true );
+				Color c = nameText.color;
+				c.a = 0.55f;
+				nameText.color = c;
+			}
 
-					Vector2 shiftAmount = new Vector2( multiSelectionToggle.rectTransform.sizeDelta.x, 0f );
+			if( multiSelectionToggle ) // Quick links don't have multi-selection toggle
+			{
+				// Don't show multi-selection toggle for folders in file selection mode
+				if( fileBrowser.MultiSelectionToggleSelectionMode && ( !IsDirectory || fileBrowser.PickerMode != FileBrowser.PickMode.Files ) )
+				{
+					if( !multiSelectionToggle.gameObject.activeSelf )
+					{
+						multiSelectionToggle.gameObject.SetActive( true );
+
+						Vector2 shiftAmount = new Vector2( multiSelectionToggle.rectTransform.sizeDelta.x, 0f );
+						icon.rectTransform.anchoredPosition += shiftAmount;
+						nameText.rectTransform.anchoredPosition += shiftAmount;
+					}
+
+					multiSelectionToggle.sprite = isSelected ? skin.FileMultiSelectionToggleOnIcon : skin.FileMultiSelectionToggleOffIcon;
+				}
+				else if( multiSelectionToggle.gameObject.activeSelf )
+				{
+					multiSelectionToggle.gameObject.SetActive( false );
+
+					Vector2 shiftAmount = new Vector2( -multiSelectionToggle.rectTransform.sizeDelta.x, 0f );
 					icon.rectTransform.anchoredPosition += shiftAmount;
 					nameText.rectTransform.anchoredPosition += shiftAmount;
+
+					// Clicking a file shortly after disabling MultiSelectionToggleSelectionMode does nothing, this workaround fixes that issue
+					prevClickTime = 0f;
 				}
-
-				multiSelectionToggle.sprite = isSelected ? fileBrowser.multiSelectionToggleOnIcon : fileBrowser.multiSelectionToggleOffIcon;
-			}
-			else if( multiSelectionToggle.gameObject.activeSelf )
-			{
-				multiSelectionToggle.gameObject.SetActive( false );
-
-				Vector2 shiftAmount = new Vector2( -multiSelectionToggle.rectTransform.sizeDelta.x, 0f );
-				icon.rectTransform.anchoredPosition += shiftAmount;
-				nameText.rectTransform.anchoredPosition += shiftAmount;
-
-				// Clicking a file shortly after disabling MultiSelectionToggleSelectionMode does nothing, this workaround fixes that issue
-				prevClickTime = 0f;
 			}
 		}
 
 		public void SetHidden( bool isHidden )
 		{
+			this.isHidden = isHidden;
+
 			Color c = icon.color;
 			c.a = isHidden ? 0.5f : 1f;
 			icon.color = c;
 
 			c = nameText.color;
-			c.a = isHidden ? 0.55f : 1f;
+			c.a = isHidden ? 0.55f : ( isSelected ? skin.FileSelectedTextColor.a : skin.FileNormalTextColor.a );
 			nameText.color = c;
+		}
+
+		public void OnSkinRefreshed( UISkin skin, bool isInitialized = true )
+		{
+			this.skin = skin;
+
+			TransformComponent.sizeDelta = new Vector2( TransformComponent.sizeDelta.x, skin.FileHeight );
+			skin.ApplyTo( nameText, isSelected ? skin.FileSelectedTextColor : skin.FileNormalTextColor );
+			icon.rectTransform.sizeDelta = new Vector2( icon.rectTransform.sizeDelta.x, -skin.FileIconsPadding );
+
+			if( isInitialized )
+				SetSelected( isSelected );
 		}
 		#endregion
 	}

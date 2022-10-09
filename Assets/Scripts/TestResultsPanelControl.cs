@@ -76,9 +76,9 @@ public class TestResultsPanelControl : MonoBehaviour
 
     public void SaveButton_Click()
     {
-        Debug.Log("Save results requested...");
-
+        Debug.Log("Saving test results");
         lastTest.testSave();
+        Debug.Log("Adding to patient test history");
         lastTest.patient.testHistory.Add(lastTest);
         saveConfirmationLabel.text = "Saved as " + lastTest.dateTime.ToString("yyyy-MMM-dd-HH-mm-ss") + ".xml!";
         saveConfirmationLabel.gameObject.SetActive(true);

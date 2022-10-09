@@ -74,13 +74,23 @@ public class Main : MonoBehaviour
         XRSettings.enabled = false;
         XRDevice.DisableAutoXRCameraTracking(mainCamera, true);
 
+        //Screen.SetResolution(3040, 1440, true);
+
         Debug.Log("Starting app ...");
         Debug.Log("Screen size: " + Screen.width + ", " + Screen.height);
+        Debug.Log("System size: " + Display.main.systemWidth + ", " + Display.main.systemHeight);
+
+        //XRDevice.fovZoomFactor = 1.5f;
+        Debug.Log("XRDevice.fovZoomFactor: " + XRDevice.fovZoomFactor);
+        //Debug.Log("XRDisplaySubsystem.occlusionMaskScale: " + XRDisplaySubsystem.occlusionMaskScale);
+        //Debug.Log("XRDisplaySubsystem.scaleOfAllRenderTargets: " + XRDisplaySubsystem.scaleOfAllRenderTargets);
 
         camOrthoSize = mainCamera.orthographicSize;
 
         Debug.Log("Camera ortho size: " + camOrthoSize);
         Debug.Log("World size: " + ((float)Screen.width / Screen.height * camOrthoSize * 2.0f) + ", " + (camOrthoSize * 2.0f));
+
+        Debug.Log("persistent data path: " + Application.persistentDataPath);
 
         // set initial states
         testState = TestState.Inactive;
@@ -94,7 +104,7 @@ public class Main : MonoBehaviour
         // create the timeout timer
         tot = new TimeoutTimer();
 
-        bt = GameObject.FindGameObjectWithTag("BTObj").GetComponent<BluetoothManager>();
+        //bt = GameObject.FindGameObjectWithTag("BTObj").GetComponent<BluetoothManager>();
         //bt.Connect();
         
         // setup the Android Java objects that let us communicate to the SmartHVF-Input project and

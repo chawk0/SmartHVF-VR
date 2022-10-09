@@ -56,7 +56,9 @@ public class LoadPatientPanelControl : MonoBehaviour
 
     public void BrowseButton_Click()
     {
-        FileBrowser.ShowLoadDialog(OnBrowseSuccess, OnBrowseCancel, true, false, Application.persistentDataPath, "Load patient file");
+        //FileBrowser.ShowLoadDialog(OnBrowseSuccess, OnBrowseCancel, true, false, Application.persistentDataPath, "Load patient file");
+        //FileBrowser.ShowLoadDialog(OnBrowseSuccess, OnBrowseCancel, true, false, null, "Select patient directory");
+        FileBrowser.ShowLoadDialog(OnBrowseSuccess, OnBrowseCancel, FileBrowser.PickMode.Folders, false, Application.persistentDataPath, null, "Select patient folder to load", "Select");
     }
 
     private void OnBrowseSuccess(string[] paths)

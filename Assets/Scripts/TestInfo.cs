@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Xml;
 using UnityEngine;
+using SimpleFileBrowser;
 
 // the goal for this class is to encapsulate all relevant data for a given test.
 // which eye was tested, the color/background settings, type of test (24-2, for example)
@@ -469,17 +470,37 @@ public class TestInfo
             Debug.Log("failed to load eyemap!");
     }
 
+    private string getXMLDataString()
+    {
+        using (MemoryStream ms = new MemoryStream())
+        {
+            DataContractSerializer s = new DataContractSerializer(this.GetType());
+            s.WriteObject(ms, this);
+            ms.Seek(0, SeekOrigin.Begin);
+
+            using (var sr = new StreamReader(ms))
+            {
+                string result = sr.ReadToEnd();
+                return result;
+            }
+        }
+    }
+
     public void testSave()
     {
-        string path = Application.persistentDataPath + "/Patients/" + this.patient.patientID + "/" + this.dateTime.ToString("yyyy-MMM-dd-HH-mm-ss") + ".xml";
-        Debug.Log("test save to " + path);
+        try
+        {
+            string path = Application.persistentDataPath + "/Patients/" + this.patient.patientID + "/" + this.dateTime.ToString("yyyy-MMM-dd-HH-mm-ss") + ".xml";
+            Debug.Log("test save to " + path);
 
-        DataContractSerializer s = new DataContractSerializer(this.GetType());
-        FileStream f = File.Create(path);
-        s.WriteObject(f, this);
-        f.Close();
+            FileBrowserHelpers.WriteTextToFile(path, this.getXMLDataString());
 
-        Debug.Log("Wrote TestInfo object as serialized XML!");
+            Debug.Log("Wrote TestInfo object as serialized XML!");
+        }
+        catch (Exception e)
+        {
+            Debug.Log("Failed to save test results!  reason: " + e.Message);
+        }
     }
 
     public static TestInfo loadFromFile(string path)
